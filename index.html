@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>מסוף בדיקת מצלמה — Feed Console</title>
+<style>
+  :root{
+    --bg: #14181c;
+    --panel: #1c2127;
+    --panel-2: #21262d;
+    --line: #2c333b;
+    --amber: #f0a13c;
+    --amber-dim: #6b5228;
+    --green: #4caf7d;
+    --red: #e2584f;
+    --text: #e7e9ea;
+    --text-dim: #8b939b;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --sans: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html, body{
+    margin:0; padding:0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); -webkit-tap-highlight-color: transparent;
+  }
+  body{
+    min-height: 100vh;
+    display:flex; flex-direction:column;
+    padding: 14px;
+    gap: 12px;
+  }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 2px 2px 10px 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand{ display:flex; flex-direction:column; gap:2px; }
+  .brand .title{ font-size: 15px; font-weight: 700; letter-spacing: 0.02em; }
+  .brand .sub{ font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: 0.03em; }
+  .rec-dot{
+    display:flex; align-items:center; gap:6px;
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+  }
+  .dot{ width:8px; height:8px; border-radius:50%; background: var(--text-dim); flex-shrink:0; }
+  .dot.live{ background: var(--red); box-shadow: 0 0 0 0 rgba(226,88,79,0.6); animation: pulse 1.4s infinite; }
+  @keyframes pulse{
+    0%{ box-shadow: 0 0 0 0 rgba(226,88,79,0.55); }
+    70%{ box-shadow: 0 0 0 8px rgba(226,88,79,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(226,88,79,0); }
+  }
+
+  .stage{
+    position: relative;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    aspect-ratio: 3/4;
+    height: 100vh;
+    display:flex; align-items:center; justify-content:center;
+  }
+  video{ width:100%; height:100%; object-fit: cover; display:block; }
+  .stage.empty::before{
+    content: "אין אות — הפעל מצלמה";
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .scanline{
+    position:absolute; inset:0; pointer-events:none;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 3px);
+    opacity: 0.5;
+  }
+  .frame-flash{
+    position:absolute; inset:0; pointer-events:none;
+    background: var(--amber);
+    opacity: 0;
+  }
+  .frame-flash.flash{ animation: flash 220ms ease-out; }
+  @keyframes flash{ 0%{opacity:0.18;} 100%{opacity:0;} }
+
+  .readout{
+    position:absolute; top:8px; right:8px; left:8px;
+    display:flex; justify-content:space-between;
+    font-family: var(--mono); font-size: 10.5px; color: #d7dadd;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    pointer-events:none;
+  }
+  .readout span{ background: rgba(0,0,0,0.35); padding: 2px 6px; border-radius: 4px; }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+  }
+  .row{
+    display:flex; gap:8px; flex-wrap: wrap;
+  }
+  label.field{
+    display:flex; flex-direction:column; gap:5px;
+    font-family: var(--mono); font-size: 10.5px; color: var(--text-dim);
+    letter-spacing: 0.03em;
+    flex: 1 1 140px;
+  }
+  input[type="text"], select{
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    padding: 8px 9px;
+    border-radius: 6px;
+    outline: none;
+  }
+  input[type="text"]:focus, select:focus{ border-color: var(--amber-dim); }
+
+  .controls{ display:flex; gap:8px; margin-top: 10px; }
+  button{
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 13.5px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    padding: 11px 14px;
+    cursor: pointer;
+    flex: 1;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    transition: filter 120ms ease, transform 80ms ease;
+  }
+  button:active{ transform: scale(0.98); }
+  button.primary{ background: var(--amber); color: #1a1305; }
+  button.primary:hover{ filter: brightness(1.06); }
+  button.stop{ background: transparent; border-color: var(--red); color: var(--red); }
+  button.stop:hover{ background: rgba(226,88,79,0.08); }
+  button:disabled{ opacity: 0.4; cursor: not-allowed; }
+  button.ghost{ background: transparent; border-color: var(--line); color: var(--text-dim); flex: 0 0 auto; padding: 11px 12px; }
+
+  .stats{
+    display:grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px; margin-top: 12px;
+  }
+  .stat{
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 10px;
+  }
+  .stat .k{ font-family: var(--mono); font-size: 9.5px; color: var(--text-dim); letter-spacing: 0.04em; }
+  .stat .v{ font-family: var(--mono); font-size: 16px; font-weight: 600; margin-top: 3px; color: var(--text); }
+  .stat .v.ok{ color: var(--green); }
+  .stat .v.err{ color: var(--red); }
+
+  .log-panel{ flex: 1; display:flex; flex-direction:column; min-height: 120px; }
+  .log-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .log-head .lbl{ font-family: var(--mono); font-size: 10.5px; color: var(--text-dim); letter-spacing: 0.05em; }
+  .clear-btn{ background:none; border:none; color: var(--text-dim); font-family: var(--mono); font-size: 10.5px; cursor:pointer; flex:none; padding: 2px 4px; }
+  .clear-btn:hover{ color: var(--text); }
+  .log{
+    font-family: var(--mono); font-size: 11px; line-height: 1.6;
+    overflow-y: auto; flex:1; max-height: 160px;
+    direction: ltr; text-align: left;
+  }
+  .log-line{ color: var(--text-dim); white-space: pre-wrap; word-break: break-all; }
+  .log-line .tag{ color: var(--amber); }
+  .log-line.err .tag{ color: var(--red); }
+  .log-line.ok .tag{ color: var(--green); }
+
+  ::-webkit-scrollbar{ width: 5px; }
+  ::-webkit-scrollbar-thumb{ background: var(--line); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="title">מסוף בדיקת מקור וידאו</div>
+    <div class="sub">WAREHOUSE-VISION · TEST FEED · v0.1</div>
+  </div>
+  <div class="rec-dot"><span class="dot" id="recDot"></span><span id="recLabel">כבוי</span></div>
+</header>
+
+<div class="stage empty" id="stage">
+  <video id="video" autoplay playsinline muted></video>
+  <div class="scanline"></div>
+  <div class="frame-flash" id="flash"></div>
+  <!-- <div class="readout" id="readout" style="display:none">
+    <span id="roCam">CAM —</span>
+    <span id="roRes">— × —</span>
+  </div> -->
+</div>
+
+<div class="panel">
+  <div class="row">
+    <label class="field">
+      מצלמה
+      <select id="facing">
+        <option value="environment">אחורית</option>
+        <option value="user">קדמית</option>
+      </select>
+    </label>
+    <label class="field">
+      <!-- קצב שליחה (מ״ש)
+      <select id="interval">
+        <option value="2000">1 פריים / 2 שניות</option>
+        <option value="1000" selected>1 פריים / שנייה</option>
+        <option value="500">2 פריימים / שנייה</option>
+        <option value="200">5 פריימים / שנייה</option>
+      </select>
+    </label> -->
+  </div>
+  <label class="field" style="margin-top:8px;">
+    כתובת שרת קבלה (endpoint)
+    <input type="text" id="endpoint" placeholder="https://your-server.com/api/analyze-frame">
+  </label>
+
+  <div class="controls">
+    <button class="primary" id="startBtn">הפעל מצלמה</button>
+    <!-- <button class="stop" id="streamBtn" disabled>התחל שידור</button> -->
+    <!-- <button class="ghost" id="snapBtn" disabled title="צילום בודד">📷</button> -->
+  </div>
+
+  <!-- <div class="stats">
+    <div class="stat">
+      <div class="k">FRAMES SENT</div>
+      <div class="v" id="statFrames">0</div>
+    </div>
+    <div class="stat">
+      <div class="k">LAST STATUS</div>
+      <div class="v" id="statStatus">—</div>
+    </div>
+    <div class="stat">
+      <div class="k">AVG SIZE</div>
+      <div class="v" id="statSize">—</div>
+    </div>
+  </div> -->
+</div>
+
+<!-- <div class="panel log-panel">
+  <div class="log-head">
+    <span class="lbl">LOG</span>
+    <button class="clear-btn" id="clearLog">נקה</button>
+  </div>
+  <div class="log" id="log"></div>
+</div> -->
+
+<canvas id="canvas" style="display:none"></canvas>
+
+<script>
+(() => {
+  const video = document.getElementById('video');
+  const stage = document.getElementById('stage');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const flash = document.getElementById('flash');
+  const readout = document.getElementById('readout');
+  const roCam = document.getElementById('roCam');
+  const roRes = document.getElementById('roRes');
+
+  const startBtn = document.getElementById('startBtn');
+  const streamBtn = document.getElementById('streamBtn');
+  const snapBtn = document.getElementById('snapBtn');
+  const facingSel = document.getElementById('facing');
+  const intervalSel = document.getElementById('interval');
+  const endpointInput = document.getElementById('endpoint');
+
+  const recDot = document.getElementById('recDot');
+  const recLabel = document.getElementById('recLabel');
+
+  const statFrames = document.getElementById('statFrames');
+  const statStatus = document.getElementById('statStatus');
+  const statSize = document.getElementById('statSize');
+
+  // const logEl = document.getElementById('log');
+  // const clearLogBtn = document.getElementById('clearLog');
+
+  let stream = null;
+  let timer = null;
+  let frameCount = 0;
+  let sizeTotal = 0;
+  let streaming = false;
+
+  function log(msg, kind){
+    // const line = document.createElement('div');
+    // line.className = 'log-line' + (kind ? ' ' + kind : '');
+    // const time = new Date().toLocaleTimeString('en-GB');
+    // line.innerHTML = '<span class="tag">[' + time + ']</span> ' + msg;
+    // logEl.appendChild(line);
+    // logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // clearLogBtn.onclick = () => { logEl.innerHTML = ''; };
+
+  async function startCamera(){
+    try{
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+      }
+      const facingMode = facingSel.value;
+      log('מבקש גישה למצלמה (facingMode=' + facingMode + ')…');
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: facingMode } },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+
+      stage.classList.remove('empty');
+      readout.style.display = 'flex';
+      const track = stream.getVideoTracks()[0];
+      const settings = track.getSettings ? track.getSettings() : {};
+      roCam.textContent = 'CAM ' + (settings.facingMode || facingMode).toUpperCase();
+      roRes.textContent = (settings.width || video.videoWidth) + ' × ' + (settings.height || video.videoHeight);
+
+      streamBtn.disabled = false;
+      snapBtn.disabled = false;
+      startBtn.textContent = 'הפעל מחדש';
+      log('המצלמה פעילה — ' + roRes.textContent, 'ok');
+    } catch (err) {
+      log('שגיאה בגישה למצלמה: ' + err.message, 'err');
+      alert('לא ניתן לגשת למצלמה: ' + err.message + '\nודא שהאתר רץ על HTTPS ושאישרת הרשאת מצלמה.');
+    }
+  }
+
+  function captureFrame(){
+    if (!video.videoWidth) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    flash.classList.remove('flash');
+    void flash.offsetWidth;
+    flash.classList.add('flash');
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const endpoint = endpointInput.value.trim();
+
+      frameCount++;
+      sizeTotal += blob.size;
+      statFrames.textContent = frameCount;
+      statSize.textContent = Math.round(sizeTotal / frameCount / 1024) + ' KB';
+
+      if (!endpoint) {
+        statStatus.textContent = 'ללא יעד';
+        statStatus.className = 'v';
+        log('פריים #' + frameCount + ' צולם (' + Math.round(blob.size/1024) + ' KB) — לא הוגדר endpoint, לא נשלח');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('frame', blob, 'frame_' + Date.now() + '.jpg');
+
+      try {
+        const res = await fetch(endpoint, { method: 'POST', body: formData });
+        if (res.ok) {
+          statStatus.textContent = 'OK ' + res.status;
+          statStatus.className = 'v ok';
+          log('פריים #' + frameCount + ' נשלח בהצלחה (' + Math.round(blob.size/1024) + ' KB)', 'ok');
+        } else {
+          statStatus.textContent = 'שגיאה ' + res.status;
+          statStatus.className = 'v err';
+          log('השרת החזיר שגיאה ' + res.status + ' עבור פריים #' + frameCount, 'err');
+        }
+      } catch (err) {
+        statStatus.textContent = 'נכשל';
+        statStatus.className = 'v err';
+        log('שליחה נכשלה (פריים #' + frameCount + '): ' + err.message, 'err');
+      }
+    }, 'image/jpeg', 0.82);
+  }
+
+//   function toggleStreaming(){
+//     if (!streaming) {
+//       streaming = true;
+//       streamBtn.textContent = 'עצור שידור';
+//       streamBtn.classList.remove('stop');
+//       recDot.querySelector ? null : null;
+//       recDot.classList.add('live');
+//       recLabel.textContent = 'משדר';
+//       const ms = parseInt(intervalSel.value, 10);
+//       timer = setInterval(captureFrame, ms);
+//       captureFrame();
+//       log('השידור התחיל — פריים כל ' + ms + ' מ״ש', 'ok');
+//     } else {
+//       streaming = false;
+//       streamBtn.textContent = 'התחל שידור';
+//       streamBtn.classList.add('stop');
+//       recDot.classList.remove('live');
+//       recLabel.textContent = 'כבוי';
+//       clearInterval(timer);
+//       log('השידור הופסק');
+//     }
+//   }
+
+  startBtn.addEventListener('click', startCamera);
+  // streamBtn.addEventListener('click', toggleStreaming);
+  // snapBtn.addEventListener('click', captureFrame);
+
+  window.addEventListener('beforeunload', () => {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+  });
+})();
+</script>
+
+</body>
+</html>
