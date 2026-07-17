@@ -36,6 +36,10 @@
     padding: 2px 2px 10px 2px;
     border-bottom: 1px solid var(--line);
   }
+
+  #video { 
+    width: auto;
+  }
   .brand{ display:flex; flex-direction:column; gap:2px; }
   .brand .title{ font-size: 15px; font-weight: 700; letter-spacing: 0.02em; }
   .brand .sub{ font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: 0.03em; }
@@ -255,9 +259,9 @@
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
   const flash = document.getElementById('flash');
-  const readout = document.getElementById('readout');
-  const roCam = document.getElementById('roCam');
-  const roRes = document.getElementById('roRes');
+//   const readout = document.getElementById('readout');
+//   const roCam = document.getElementById('roCam');
+//   const roRes = document.getElementById('roRes');
 
   const startBtn = document.getElementById('startBtn');
   const streamBtn = document.getElementById('streamBtn');
@@ -294,6 +298,7 @@
   // clearLogBtn.onclick = () => { logEl.innerHTML = ''; };
 
   async function startCamera(){
+    toggleStreaming()
     try{
       if (stream) {
         stream.getTracks().forEach(t => t.stop());
@@ -307,17 +312,17 @@
       video.srcObject = stream;
       await video.play();
 
-      stage.classList.remove('empty');
-      readout.style.display = 'flex';
+    //   stage.classList.remove('empty');
+    //   readout.style.display = 'flex';
       const track = stream.getVideoTracks()[0];
       const settings = track.getSettings ? track.getSettings() : {};
-      roCam.textContent = 'CAM ' + (settings.facingMode || facingMode).toUpperCase();
-      roRes.textContent = (settings.width || video.videoWidth) + ' × ' + (settings.height || video.videoHeight);
+    //   roCam.textContent = 'CAM ' + (settings.facingMode || facingMode).toUpperCase();
+    //   roRes.textContent = (settings.width || video.videoWidth) + ' × ' + (settings.height || video.videoHeight);
 
-      streamBtn.disabled = false;
-      snapBtn.disabled = false;
-      startBtn.textContent = 'הפעל מחדש';
-      log('המצלמה פעילה — ' + roRes.textContent, 'ok');
+    //   streamBtn.disabled = false;
+    //   snapBtn.disabled = false;
+    //   startBtn.textContent = 'הפעל מחדש';
+      log('המצלמה פעילה', 'ok');
     } catch (err) {
       log('שגיאה בגישה למצלמה: ' + err.message, 'err');
       alert('לא ניתן לגשת למצלמה: ' + err.message + '\nודא שהאתר רץ על HTTPS ושאישרת הרשאת מצלמה.');
@@ -372,28 +377,28 @@
     }, 'image/jpeg', 0.82);
   }
 
-//   function toggleStreaming(){
-//     if (!streaming) {
-//       streaming = true;
+  function toggleStreaming(){
+    if (!streaming) {
+      streaming = true;
 //       streamBtn.textContent = 'עצור שידור';
 //       streamBtn.classList.remove('stop');
-//       recDot.querySelector ? null : null;
-//       recDot.classList.add('live');
-//       recLabel.textContent = 'משדר';
+      recDot.querySelector ? null : null;
+      recDot.classList.add('live');
+      recLabel.textContent = 'משדר';
 //       const ms = parseInt(intervalSel.value, 10);
 //       timer = setInterval(captureFrame, ms);
 //       captureFrame();
 //       log('השידור התחיל — פריים כל ' + ms + ' מ״ש', 'ok');
-//     } else {
-//       streaming = false;
+    } else {
+      streaming = false;
 //       streamBtn.textContent = 'התחל שידור';
 //       streamBtn.classList.add('stop');
-//       recDot.classList.remove('live');
-//       recLabel.textContent = 'כבוי';
+      recDot.classList.remove('live');
+      recLabel.textContent = 'כבוי';
 //       clearInterval(timer);
 //       log('השידור הופסק');
-//     }
-//   }
+    }
+  }
 
   startBtn.addEventListener('click', startCamera);
   // streamBtn.addEventListener('click', toggleStreaming);
