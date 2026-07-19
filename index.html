@@ -242,13 +242,13 @@
   </div> -->
 </div>
 
-<!-- <div class="panel log-panel">
+<div class="panel log-panel">
   <div class="log-head">
     <span class="lbl">LOG</span>
     <button class="clear-btn" id="clearLog">נקה</button>
   </div>
   <div class="log" id="log"></div>
-</div> -->
+</div>
 
 <canvas id="canvas" style="display:none"></canvas>
 
@@ -277,8 +277,8 @@
   const statStatus = document.getElementById('statStatus');
   const statSize = document.getElementById('statSize');
 
-  // const logEl = document.getElementById('log');
-  // const clearLogBtn = document.getElementById('clearLog');
+  const logEl = document.getElementById('log');
+  const clearLogBtn = document.getElementById('clearLog');
 
   let stream = null;
   let timer = null;
@@ -287,18 +287,17 @@
   let streaming = false;
 
   function log(msg, kind){
-    // const line = document.createElement('div');
-    // line.className = 'log-line' + (kind ? ' ' + kind : '');
-    // const time = new Date().toLocaleTimeString('en-GB');
-    // line.innerHTML = '<span class="tag">[' + time + ']</span> ' + msg;
-    // logEl.appendChild(line);
-    // logEl.scrollTop = logEl.scrollHeight;
+    const line = document.createElement('div');
+    line.className = 'log-line' + (kind ? ' ' + kind : '');
+    const time = new Date().toLocaleTimeString('en-GB');
+    line.innerHTML = '<span class="tag">[' + time + ']</span> ' + msg;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
   }
 
-  // clearLogBtn.onclick = () => { logEl.innerHTML = ''; };
+  clearLogBtn.onclick = () => { logEl.innerHTML = ''; };
 
   async function startCamera(){
-    toggleStreaming()
     try{
       if (stream) {
         stream.getTracks().forEach(t => t.stop());
@@ -312,21 +311,42 @@
       video.srcObject = stream;
       await video.play();
 
-    //   stage.classList.remove('empty');
+      stage.classList.remove('empty');
     //   readout.style.display = 'flex';
       const track = stream.getVideoTracks()[0];
       const settings = track.getSettings ? track.getSettings() : {};
     //   roCam.textContent = 'CAM ' + (settings.facingMode || facingMode).toUpperCase();
     //   roRes.textContent = (settings.width || video.videoWidth) + ' × ' + (settings.height || video.videoHeight);
 
-    //   streamBtn.disabled = false;
-    //   snapBtn.disabled = false;
-    //   startBtn.textContent = 'הפעל מחדש';
+      streaming = true;
+      recDot.classList.add('live');
+      recLabel.textContent = 'משדר';
+      startBtn.textContent = 'עצור שידור';
+      startBtn.classList.remove('primary');
+      startBtn.classList.add('stop');
       log('המצלמה פעילה', 'ok');
     } catch (err) {
       log('שגיאה בגישה למצלמה: ' + err.message, 'err');
       alert('לא ניתן לגשת למצלמה: ' + err.message + '\nודא שהאתר רץ על HTTPS ושאישרת הרשאת מצלמה.');
     }
+  }
+
+  function stopStreaming(){
+    if (timer) { clearInterval(timer); timer = null; }
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+    video.srcObject = null;
+    stage.classList.add('empty');
+
+    streaming = false;
+    recDot.classList.remove('live');
+    recLabel.textContent = 'כבוי';
+    startBtn.textContent = 'הפעל מצלמה';
+    startBtn.classList.remove('stop');
+    startBtn.classList.add('primary');
+    log('השידור הופסק');
   }
 
   function captureFrame(){
@@ -377,30 +397,10 @@
     }, 'image/jpeg', 0.82);
   }
 
-  function toggleStreaming(){
-    if (!streaming) {
-      streaming = true;
-//       streamBtn.textContent = 'עצור שידור';
-//       streamBtn.classList.remove('stop');
-      recDot.querySelector ? null : null;
-      recDot.classList.add('live');
-      recLabel.textContent = 'משדר';
-//       const ms = parseInt(intervalSel.value, 10);
-//       timer = setInterval(captureFrame, ms);
-//       captureFrame();
-//       log('השידור התחיל — פריים כל ' + ms + ' מ״ש', 'ok');
-    } else {
-      streaming = false;
-//       streamBtn.textContent = 'התחל שידור';
-//       streamBtn.classList.add('stop');
-      recDot.classList.remove('live');
-      recLabel.textContent = 'כבוי';
-//       clearInterval(timer);
-//       log('השידור הופסק');
-    }
-  }
-
-  startBtn.addEventListener('click', startCamera);
+  startBtn.addEventListener('click', () => {
+    if (streaming) stopStreaming();
+    else startCamera();
+  });
   // streamBtn.addEventListener('click', toggleStreaming);
   // snapBtn.addEventListener('click', captureFrame);
 
