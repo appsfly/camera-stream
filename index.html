@@ -325,6 +325,10 @@
       startBtn.classList.remove('primary');
       startBtn.classList.add('stop');
       log('המצלמה פעילה', 'ok');
+
+      if (timer) clearInterval(timer);
+      timer = setInterval(captureFrame, 1000);
+      log('השידור התחיל — פריים כל שנייה', 'ok');
     } catch (err) {
       log('שגיאה בגישה למצלמה: ' + err.message, 'err');
       alert('לא ניתן לגשת למצלמה: ' + err.message + '\nודא שהאתר רץ על HTTPS ושאישרת הרשאת מצלמה.');
@@ -365,12 +369,11 @@
 
       frameCount++;
       sizeTotal += blob.size;
-      statFrames.textContent = frameCount;
-      statSize.textContent = Math.round(sizeTotal / frameCount / 1024) + ' KB';
+      if (statFrames) statFrames.textContent = frameCount;
+      if (statSize) statSize.textContent = Math.round(sizeTotal / frameCount / 1024) + ' KB';
 
       if (!endpoint) {
-        statStatus.textContent = 'ללא יעד';
-        statStatus.className = 'v';
+        if (statStatus) { statStatus.textContent = 'ללא יעד'; statStatus.className = 'v'; }
         log('פריים #' + frameCount + ' צולם (' + Math.round(blob.size/1024) + ' KB) — לא הוגדר endpoint, לא נשלח');
         return;
       }
@@ -381,17 +384,14 @@
       try {
         const res = await fetch(endpoint, { method: 'POST', body: formData });
         if (res.ok) {
-          statStatus.textContent = 'OK ' + res.status;
-          statStatus.className = 'v ok';
+          if (statStatus) { statStatus.textContent = 'OK ' + res.status; statStatus.className = 'v ok'; }
           log('פריים #' + frameCount + ' נשלח בהצלחה (' + Math.round(blob.size/1024) + ' KB)', 'ok');
         } else {
-          statStatus.textContent = 'שגיאה ' + res.status;
-          statStatus.className = 'v err';
+          if (statStatus) { statStatus.textContent = 'שגיאה ' + res.status; statStatus.className = 'v err'; }
           log('השרת החזיר שגיאה ' + res.status + ' עבור פריים #' + frameCount, 'err');
         }
       } catch (err) {
-        statStatus.textContent = 'נכשל';
-        statStatus.className = 'v err';
+        if (statStatus) { statStatus.textContent = 'נכשל'; statStatus.className = 'v err'; }
         log('שליחה נכשלה (פריים #' + frameCount + '): ' + err.message, 'err');
       }
     }, 'image/jpeg', 0.82);
