@@ -215,9 +215,19 @@
       </select>
     </label> -->
   </div>
+  <div class="row" style="margin-top:8px;">
+    <label class="field">
+      כתובת שרת (API)
+      <input type="text" id="server" placeholder="http://localhost:8080">
+    </label>
+    <label class="field">
+      מזהה מצלמה
+      <input type="text" id="cameraId" placeholder="phone-1">
+    </label>
+  </div>
   <label class="field" style="margin-top:8px;">
-    כתובת שרת קבלה (endpoint)
-    <input type="text" id="endpoint" placeholder="https://your-server.com/api/analyze-frame">
+    טוקן מכשיר (EDGE_DEVICE_TOKEN)
+    <input type="text" id="token" placeholder="dev-edge-token">
   </label>
 
   <div class="controls">
@@ -268,7 +278,24 @@
   const snapBtn = document.getElementById('snapBtn');
   const facingSel = document.getElementById('facing');
   const intervalSel = document.getElementById('interval');
-  const endpointInput = document.getElementById('endpoint');
+  const serverInput = document.getElementById('server');
+  const cameraIdInput = document.getElementById('cameraId');
+  const tokenInput = document.getElementById('token');
+
+  ['server', 'cameraId', 'token'].forEach((key) => {
+    const el = document.getElementById(key);
+    const saved = localStorage.getItem('camcap_' + key);
+    if (saved) el.value = saved;
+    el.addEventListener('change', () => localStorage.setItem('camcap_' + key, el.value.trim()));
+  });
+
+  function buildEndpoint(){
+    const base = serverInput.value.trim().replace(/\/+$/, '');
+    const cameraId = cameraIdInput.value.trim();
+    const token = tokenInput.value.trim();
+    if (!base || !cameraId) return '';
+    return base + '/v1/cameras/' + encodeURIComponent(cameraId) + '/frames?token=' + encodeURIComponent(token);
+  }
 
   const recDot = document.getElementById('recDot');
   const recLabel = document.getElementById('recLabel');
@@ -365,7 +392,7 @@
 
     canvas.toBlob(async (blob) => {
       if (!blob) return;
-      const endpoint = endpointInput.value.trim();
+      const endpoint = buildEndpoint();
 
       frameCount++;
       sizeTotal += blob.size;
@@ -374,7 +401,7 @@
 
       if (!endpoint) {
         if (statStatus) { statStatus.textContent = 'ללא יעד'; statStatus.className = 'v'; }
-        log('פריים #' + frameCount + ' צולם (' + Math.round(blob.size/1024) + ' KB) — לא הוגדר endpoint, לא נשלח');
+        log('פריים #' + frameCount + ' צולם (' + Math.round(blob.size/1024) + ' KB) — חסר שרת/מזהה מצלמה, לא נשלח');
         return;
       }
 
@@ -383,12 +410,15 @@
 
       try {
         const res = await fetch(endpoint, { method: 'POST', body: formData });
+        let body = null;
+        try { body = await res.json(); } catch {}
         if (res.ok) {
           if (statStatus) { statStatus.textContent = 'OK ' + res.status; statStatus.className = 'v ok'; }
-          log('פריים #' + frameCount + ' נשלח בהצלחה (' + Math.round(blob.size/1024) + ' KB)', 'ok');
+          const extra = body ? ' — אנשים: ' + body.people_count + (body.event_id ? ' — אירוע נוצר!' : '') : '';
+          log('פריים #' + frameCount + ' נשלח בהצלחה (' + Math.round(blob.size/1024) + ' KB)' + extra, 'ok');
         } else {
           if (statStatus) { statStatus.textContent = 'שגיאה ' + res.status; statStatus.className = 'v err'; }
-          log('השרת החזיר שגיאה ' + res.status + ' עבור פריים #' + frameCount, 'err');
+          log('השרת החזיר שגיאה ' + res.status + ' עבור פריים #' + frameCount + (body?.error ? ' — ' + body.error : ''), 'err');
         }
       } catch (err) {
         if (statStatus) { statStatus.textContent = 'נכשל'; statStatus.className = 'v err'; }
