@@ -332,7 +332,12 @@
       const facingMode = facingSel.value;
       log('מבקש גישה למצלמה (facingMode=' + facingMode + ')…');
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: facingMode } },
+        video: {
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          advanced: [{ focusMode: 'continuous' }]
+        },
         audio: false
       });
       video.srcObject = stream;
@@ -424,7 +429,7 @@
         if (statStatus) { statStatus.textContent = 'נכשל'; statStatus.className = 'v err'; }
         log('שליחה נכשלה (פריים #' + frameCount + '): ' + err.message, 'err');
       }
-    }, 'image/jpeg', 0.82);
+    }, 'image/jpeg', 0.92);
   }
 
   startBtn.addEventListener('click', () => {
