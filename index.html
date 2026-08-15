@@ -206,14 +206,13 @@
       </select>
     </label>
     <label class="field">
-      <!-- קצב שליחה (מ״ש)
+      קצב שליחה (מ״ש)
       <select id="interval">
-        <option value="2000">1 פריים / 2 שניות</option>
-        <option value="1000" selected>1 פריים / שנייה</option>
-        <option value="500">2 פריימים / שנייה</option>
+        <option value="1000">1 פריים / שנייה</option>
+        <option value="500" selected>2 פריימים / שנייה</option>
         <option value="200">5 פריימים / שנייה</option>
       </select>
-    </label> -->
+    </label>
   </div>
   <div class="row" style="margin-top:8px;">
     <label class="field">
@@ -282,7 +281,7 @@
   const cameraIdInput = document.getElementById('cameraId');
   const tokenInput = document.getElementById('token');
 
-  ['server', 'cameraId', 'token'].forEach((key) => {
+  ['server', 'cameraId', 'token', 'interval'].forEach((key) => {
     const el = document.getElementById(key);
     const saved = localStorage.getItem('camcap_' + key);
     if (saved) el.value = saved;
@@ -336,6 +335,7 @@
           facingMode: { ideal: facingMode },
           width: { ideal: 1920 },
           height: { ideal: 1080 },
+          frameRate: { ideal: 30 },
           advanced: [{ focusMode: 'continuous' }]
         },
         audio: false
@@ -358,9 +358,10 @@
       startBtn.classList.add('stop');
       log('המצלמה פעילה', 'ok');
 
+      const sendInterval = Number(intervalSel.value) || 1000;
       if (timer) clearInterval(timer);
-      timer = setInterval(captureFrame, 1000);
-      log('השידור התחיל — פריים כל שנייה', 'ok');
+      timer = setInterval(captureFrame, sendInterval);
+      log('השידור התחיל — פריים כל ' + sendInterval + ' מ״ש', 'ok');
     } catch (err) {
       log('שגיאה בגישה למצלמה: ' + err.message, 'err');
       alert('לא ניתן לגשת למצלמה: ' + err.message + '\nודא שהאתר רץ על HTTPS ושאישרת הרשאת מצלמה.');
